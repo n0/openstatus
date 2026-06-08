@@ -29,6 +29,36 @@ services:
       start_period: 5s
     restart: unless-stopped
 
+
+  db-migrate:
+    image: oven/bun:1.3.6
+    container_name: openstatus-db-migrate
+    networks:
+      - openstatus
+    environment:
+      - DATABASE_URL=http://libsql:8080
+      - DATABASE_AUTH_TOKEN=
+    depends_on:
+      libsql:
+        condition: service_started
+    working_dir: /work
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        apt-get update -qq && apt-get install -y -qq curl ca-certificates >/dev/null
+        echo "fetching openstatus repo tarball for migration scripts..."
+        curl -sL https://github.com/n0/openstatus/archive/refs/heads/main.tar.gz | tar xz -C /work --strip-components=1
+        echo "waiting for libsql..."
+        until curl -sf http://libsql:8080/health >/dev/null 2>&1 || curl -sf http://libsql:8080/ >/dev/null 2>&1; do sleep 1; done
+        echo "running migrations..."
+        cd /work/packages/db
+        bun install --silent
+        bun run migrate
+        echo "migrations complete."
+    restart: "no"
+
   tinybird:
     image: tinybirdco/tinybird-local:latest
     container_name: openstatus-tinybird
@@ -194,3 +224,4 @@ services:
       retries: 3
       start_period: 5s
     restart: unless-stopped
+
