@@ -1,7 +1,7 @@
 # documentation: https://docs.openstatus.dev
 # slogan: Open-source uptime monitoring and status pages
 # category: monitoring
-# tags: monitoring, status, uptime, status-page, open-source, self-hosted
+# tags: monitoring, status, uptime, statuspage, open-source, self-hosted
 # logo: svgs/openstatus.svg
 
 services:
@@ -160,10 +160,10 @@ services:
       server:
         condition: service_started
 
-  status-page:
-    image: ghcr.io/openstatushq/openstatus-status-page:latest
+  statuspage:
+    image: ghcr.io/openstatushq/openstatus-statuspage:latest
     environment:
-      - SERVICE_FQDN_STATUS_PAGE_3000
+      - SERVICE_FQDN_STATUSPAGE_3000
       - DATABASE_URL=http://libsql:8080
       - DATABASE_AUTH_TOKEN=
       - PORT=3000
@@ -183,7 +183,7 @@ services:
       - PROJECT_ID_VERCEL=self-hosted
       - TEAM_ID_VERCEL=self-hosted
       - VERCEL_AUTH_BEARER_TOKEN=self-hosted
-      - VERCEL_URL=${SERVICE_FQDN_STATUS_PAGE}
+      - VERCEL_URL=${SERVICE_FQDN_STATUSPAGE}
       - NEXT_PUBLIC_OPENPANEL_CLIENT_ID=self-hosted
       - OPENPANEL_CLIENT_SECRET=self-hosted
       - TURBO_ENV_MODE=loose
