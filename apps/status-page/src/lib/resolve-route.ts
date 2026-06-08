@@ -55,6 +55,23 @@ export function resolveRoute({
     prefix = subdomain.toLowerCase();
   }
 
+  // Self-host loop guard: when the customDomain contains dots, the rewrite
+  // path /{prefix}/{locale} contains dots too, and subsequent middleware
+  // passes keep appending to it. If pathname already begins with the prefix,
+  // treat this as the post-rewrite state and short-circuit further rewrites.
+  if (type === "hostname" && prefix.includes(".")) {
+    const expectedPrefix = `/${prefix}/`;
+    if (pathname.startsWith(expectedPrefix) || pathname === `/${prefix}`) {
+      return {
+        type,
+        prefix,
+        locale: (locales as readonly string[]).includes(pathnames[2]?.toLowerCase() ?? "") ? (pathnames[2]?.toLowerCase() as Locale) : defaultLocale,
+        localeExplicit: (locales as readonly string[]).includes(pathnames[2]?.toLowerCase() ?? ""),
+        rewritePath: pathname,
+      };
+    }
+  }
+
   // Root path on non-hostname type — no page to resolve
   if (pathname === "/" && type !== "hostname" && subdomain === null) {
     return null;
@@ -113,3 +130,4 @@ export function resolveRoute({
     rewritePath: `/${prefix}/${locale}${rest ? `/${rest}` : ""}`,
   };
 }
+
