@@ -162,7 +162,10 @@ services:
         condition: service_started
 
   statuspage:
-    image: ghcr.io/openstatushq/openstatus-status-page:latest
+    image: openstatus-status-page-patched:latest
+    build:
+      context: .
+      dockerfile: apps/status-page/Dockerfile
     environment:
       - SERVICE_FQDN_STATUSPAGE_3000
       - DATABASE_URL=http://libsql:8080
@@ -274,6 +277,7 @@ services:
 
 volumes:
   openstatus-libsql:
+
 
 
 
