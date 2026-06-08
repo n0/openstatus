@@ -171,8 +171,9 @@ services:
       - HOSTNAME=0.0.0.0
       - NODE_ENV=production
       - SELF_HOST=true
+      - AUTH_URL=https://status.uswap.net
       - AUTH_TRUST_HOST=true
-      - NEXT_PUBLIC_URL=${SERVICE_URL_DASHBOARD}
+      - NEXT_PUBLIC_URL=https://status.uswap.net
       - RESEND_API_KEY=${SERVICE_PASSWORD_RESENDKEY}
       - CRON_SECRET=${SERVICE_PASSWORD_CRONSECRET}
       - UNKEY_API_ID=${SERVICE_PASSWORD_UNKEYAPI}
@@ -273,6 +274,7 @@ services:
 
 volumes:
   openstatus-libsql:
+
 
 
 
