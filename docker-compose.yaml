@@ -20,6 +20,7 @@ services:
 
   db-migrate:
     image: oven/bun:1.3.6
+    user: "0:0"
     environment:
       - DATABASE_URL=http://libsql:8080
       - DATABASE_AUTH_TOKEN=
@@ -195,5 +196,6 @@ services:
 
 volumes:
   openstatus-libsql:
+
 
 
