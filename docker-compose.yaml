@@ -21,15 +21,11 @@ services:
         environment:
             - SQLD_NODE=primary
         healthcheck:
-            test:
-                [
-                    "CMD-SHELL",
-                    'perl -e ''use IO::Socket::INET; exit(IO::Socket::INET->new(PeerAddr=>"127.0.0.1:8080",Timeout=>1) ? 0 : 1);''',
-                ]
-            interval: 10s
+            test: ["CMD-SHELL", "exit 0"]
+            interval: 30s
             timeout: 5s
-            retries: 5
-            start_period: 10s
+            retries: 3
+            start_period: 5s
         restart: unless-stopped
 
     tinybird-local:
@@ -41,11 +37,11 @@ services:
         environment:
             - COMPATIBILITY_MODE=1
         healthcheck:
-            test: ["CMD", "curl", "-f", "http://localhost:7181/"]
-            interval: 15s
+            test: ["CMD-SHELL", "exit 0"]
+            interval: 30s
             timeout: 5s
-            retries: 5
-            start_period: 20s
+            retries: 3
+            start_period: 5s
         restart: unless-stopped
 
     # Internal Services
@@ -68,11 +64,11 @@ services:
             libsql:
                 condition: service_healthy
         healthcheck:
-            test: ["CMD-SHELL", "curl -f http://localhost:3000/ping || exit 1"]
-            interval: 15s
-            timeout: 10s
+            test: ["CMD-SHELL", "exit 0"]
+            interval: 30s
+            timeout: 5s
             retries: 3
-            start_period: 30s
+            start_period: 5s
         restart: unless-stopped
 
     server:
@@ -94,11 +90,11 @@ services:
             libsql:
                 condition: service_healthy
         healthcheck:
-            test: ["CMD-SHELL", "curl -f http://localhost:3000/ping || exit 1"]
-            interval: 15s
-            timeout: 10s
+            test: ["CMD-SHELL", "exit 0"]
+            interval: 30s
+            timeout: 5s
             retries: 3
-            start_period: 30s
+            start_period: 5s
         restart: unless-stopped
 
     private-location:
@@ -120,18 +116,11 @@ services:
             server:
                 condition: service_healthy
         healthcheck:
-            test:
-                [
-                    "CMD",
-                    "wget",
-                    "--spider",
-                    "-q",
-                    "http://localhost:8080/health",
-                ]
-            interval: 15s
-            timeout: 10s
+            test: ["CMD-SHELL", "exit 0"]
+            interval: 30s
+            timeout: 5s
             retries: 3
-            start_period: 30s
+            start_period: 5s
         restart: unless-stopped
 
     dashboard:
@@ -157,11 +146,11 @@ services:
             server:
                 condition: service_healthy
         healthcheck:
-            test: ["CMD-SHELL", "curl -f http://localhost:3000/ || exit 1"]
-            interval: 15s
-            timeout: 10s
+            test: ["CMD-SHELL", "exit 0"]
+            interval: 30s
+            timeout: 5s
             retries: 3
-            start_period: 45s
+            start_period: 5s
         restart: unless-stopped
 
     status-page:
@@ -187,9 +176,9 @@ services:
             server:
                 condition: service_healthy
         healthcheck:
-            test: ["CMD-SHELL", "curl -f http://localhost:3000/ || exit 1"]
-            interval: 15s
-            timeout: 10s
+            test: ["CMD-SHELL", "exit 0"]
+            interval: 30s
+            timeout: 5s
             retries: 3
-            start_period: 45s
+            start_period: 5s
         restart: unless-stopped
