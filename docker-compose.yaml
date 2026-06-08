@@ -16,9 +16,6 @@ services:
         image: ghcr.io/tursodatabase/libsql-server:latest
         networks:
             - openstatus
-        ports:
-            - "8080:8080"
-            - "5001:5001"
         volumes:
             - libsql-data:/var/lib/sqld
         environment:
@@ -41,8 +38,6 @@ services:
         platform: linux/amd64
         networks:
             - openstatus
-        ports:
-            - "7181:7181"
         environment:
             - COMPATIBILITY_MODE=1
         healthcheck:
@@ -62,8 +57,6 @@ services:
         image: openstatus/workflows:latest
         networks:
             - openstatus
-        ports:
-            - "3000:3000"
         volumes:
             - workflows-data:/app/data
         env_file:
@@ -90,8 +83,6 @@ services:
         image: openstatus/server:latest
         networks:
             - openstatus
-        ports:
-            - "3001:3000"
         env_file:
             - .env.docker
         environment:
@@ -118,8 +109,6 @@ services:
         image: openstatus/private-location:latest
         networks:
             - openstatus
-        ports:
-            - "8081:8080"
         env_file:
             - .env.docker
         environment:
@@ -153,8 +142,6 @@ services:
         image: openstatus/dashboard:latest
         networks:
             - openstatus
-        ports:
-            - "3002:3000"
         env_file:
             - .env.docker
         environment:
@@ -185,8 +172,6 @@ services:
         image: openstatus/status-page:latest
         networks:
             - openstatus
-        ports:
-            - "3003:3000"
         env_file:
             - .env.docker
         environment:
