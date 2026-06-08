@@ -47,6 +47,7 @@ services:
   workflows:
     image: ghcr.io/openstatushq/openstatus-workflows:latest
     environment:
+      - TINYBIRD_URL=http://tinybird:7181
       - DATABASE_URL=http://libsql:8080
       - DATABASE_AUTH_TOKEN=
       - PORT=3000
@@ -214,8 +215,65 @@ services:
     restart: "no"
 
 
+  tinybird:
+    image: tinybirdco/tinybird-local:latest
+    expose:
+      - "7181"
+    environment:
+      - COMPATIBILITY_MODE=1
+    healthcheck:
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  private-location:
+    image: ghcr.io/openstatushq/openstatus-private-location:latest
+    expose:
+      - "8080"
+    environment:
+      - DB_URL=http://libsql:8080
+      - TINYBIRD_URL=http://tinybird:7181
+      - GIN_MODE=release
+      - PORT=8080
+    depends_on:
+      server:
+        condition: service_started
+      tinybird:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  checker:
+    image: ghcr.io/openstatushq/openstatus-checker:latest
+    expose:
+      - "8080"
+    environment:
+      - DATABASE_URL=http://libsql:8080
+      - DATABASE_AUTH_TOKEN=
+      - PORT=8080
+    depends_on:
+      server:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+
 volumes:
   openstatus-libsql:
+
 
 
 
