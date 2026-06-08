@@ -95,7 +95,10 @@ services:
       start_period: 30s
 
   dashboard:
-    image: ghcr.io/openstatushq/openstatus-dashboard:latest
+    image: openstatus-dashboard-patched:latest
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
     environment:
       - SERVICE_FQDN_DASHBOARD_3000
       - DATABASE_URL=http://libsql:8080
@@ -275,8 +278,45 @@ services:
     restart: unless-stopped
 
 
+  cron-trigger:
+    image: curlimages/curl:8.10.1
+    depends_on:
+      workflows:
+        condition: service_started
+    environment:
+      - CRON_SECRET=${SERVICE_PASSWORD_CRONSECRET}
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        echo "starting cron trigger loop..."
+        # Run all periods at appropriate intervals.
+        # We loop every 30s and trigger each period when its turn comes.
+        i=0
+        while true; do
+          curl -s -m 5 -H "Authorization: $$CRON_SECRET" http://workflows:3000/checker/30s >/dev/null || true
+          if [ $$((i % 2)) -eq 0 ]; then
+            curl -s -m 5 -H "Authorization: $$CRON_SECRET" http://workflows:3000/checker/1m >/dev/null || true
+          fi
+          if [ $$((i % 10)) -eq 0 ]; then
+            curl -s -m 5 -H "Authorization: $$CRON_SECRET" http://workflows:3000/checker/5m >/dev/null || true
+          fi
+          if [ $$((i % 20)) -eq 0 ]; then
+            curl -s -m 5 -H "Authorization: $$CRON_SECRET" http://workflows:3000/checker/10m >/dev/null || true
+          fi
+          if [ $$((i % 60)) -eq 0 ]; then
+            curl -s -m 5 -H "Authorization: $$CRON_SECRET" http://workflows:3000/checker/30m >/dev/null || true
+            curl -s -m 5 -H "Authorization: $$CRON_SECRET" http://workflows:3000/checker/1h >/dev/null || true
+          fi
+          echo "[cron] tick i=$$i"
+          i=$$((i+1))
+          sleep 30
+        done
+    restart: unless-stopped
+
+
 volumes:
   openstatus-libsql:
+
 
 
 
