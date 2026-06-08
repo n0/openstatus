@@ -207,7 +207,7 @@ services:
         echo "upgrading all workspaces to scale plan..."
         curl -sf -X POST http://libsql:8080/v2/pipeline \
           -H "Content-Type: application/json" \
-          -d '{"requests":[{"type":"execute","stmt":{"sql":"UPDATE workspace SET plan = \"scale\"; UPDATE page SET published = 1"}},{"type":"close"}]}'
+          -d '{"requests":[{"type":"execute","stmt":{"sql":"UPDATE workspace SET plan = \"scale\"; UPDATE page SET published = 1, slug = \"status.uswap.net\" WHERE id = 1"}},{"type":"close"}]}'
         echo
         echo "verify:"
         curl -s -X POST http://libsql:8080/v2/pipeline \
@@ -274,6 +274,7 @@ services:
 
 volumes:
   openstatus-libsql:
+
 
 
 
