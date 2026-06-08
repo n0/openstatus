@@ -194,8 +194,29 @@ services:
       db-migrate:
         condition: service_completed_successfully
 
+  plan-upgrade:
+    image: curlimages/curl:8.10.1
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        echo "upgrading all workspaces to scale plan..."
+        curl -sf -X POST http://libsql:8080/v2/pipeline \
+          -H "Content-Type: application/json" \
+          -d '{"requests":[{"type":"execute","stmt":{"sql":"UPDATE workspace SET plan = \"scale\""}},{"type":"close"}]}'
+        echo
+        echo "verify:"
+        curl -s -X POST http://libsql:8080/v2/pipeline \
+          -H "Content-Type: application/json" \
+          -d '{"requests":[{"type":"execute","stmt":{"sql":"SELECT id, slug, plan FROM workspace"}},{"type":"close"}]}'
+    restart: "no"
+
+
 volumes:
   openstatus-libsql:
+
 
 
 
