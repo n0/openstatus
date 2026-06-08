@@ -161,7 +161,7 @@ services:
         condition: service_started
 
   statuspage:
-    image: ghcr.io/openstatushq/openstatus-statuspage:latest
+    image: ghcr.io/openstatushq/openstatus-status-page:latest
     environment:
       - SERVICE_FQDN_STATUSPAGE_3000
       - DATABASE_URL=http://libsql:8080
