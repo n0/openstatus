@@ -205,17 +205,18 @@ services:
         echo "upgrading all workspaces to scale plan..."
         curl -sf -X POST http://libsql:8080/v2/pipeline \
           -H "Content-Type: application/json" \
-          -d '{"requests":[{"type":"execute","stmt":{"sql":"UPDATE workspace SET plan = \"scale\""}},{"type":"close"}]}'
+          -d '{"requests":[{"type":"execute","stmt":{"sql":"UPDATE workspace SET plan = \"scale\"; UPDATE page SET published = 1"}},{"type":"close"}]}'
         echo
         echo "verify:"
         curl -s -X POST http://libsql:8080/v2/pipeline \
           -H "Content-Type: application/json" \
-          -d '{"requests":[{"type":"execute","stmt":{"sql":"SELECT id, slug, plan FROM workspace"}},{"type":"close"}]}'
+          -d '{"requests":[{"type":"execute","stmt":{"sql":"SELECT id, slug, plan, name FROM workspace"}},{"type":"close"}]}'
     restart: "no"
 
 
 volumes:
   openstatus-libsql:
+
 
 
 
