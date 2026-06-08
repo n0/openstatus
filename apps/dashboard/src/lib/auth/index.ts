@@ -39,6 +39,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return baseUrl;
     },
     async signIn(params) {
+      // Self-host allowlist: only authorize GitHub usernames listed in ALLOWED_GITHUB_USERNAMES (comma-separated).
+      // Empty/unset = no restriction (preserves OSS default behavior).
+      if (params.account?.provider === "github" && process.env.ALLOWED_GITHUB_USERNAMES) {
+        const allowed = process.env.ALLOWED_GITHUB_USERNAMES.split(",").map((s) => s.trim()).filter(Boolean);
+        const login = (params.profile as { login?: string } | undefined)?.login;
+        if (!login || !allowed.includes(login)) {
+          console.warn(`[auth] github login rejected for username "${login}" (not in ALLOWED_GITHUB_USERNAMES)`);
+          return false;
+        }
+      }
       // We keep updating the user info when we loggin in
 
       if (params.account?.provider === "google") {
@@ -140,3 +150,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   // secret: process.env.AUTH_SECRET, // default is `AUTH_SECRET`
   debug: process.env.NODE_ENV === "development",
 });
+
