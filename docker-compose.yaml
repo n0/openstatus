@@ -12,6 +12,8 @@ volumes:
 services:
     # External services
     libsql:
+        expose:
+          - "8080"
         container_name: openstatus-libsql
         image: ghcr.io/tursodatabase/libsql-server:latest
         networks:
@@ -29,6 +31,8 @@ services:
         restart: unless-stopped
 
     tinybird-local:
+        expose:
+          - "7181"
         container_name: openstatus-tinybird
         image: tinybirdco/tinybird-local:latest
         platform: linux/amd64
@@ -46,6 +50,8 @@ services:
 
     # Internal Services
     workflows:
+        expose:
+          - "3000"
         container_name: openstatus-workflows
         build:
             context: .
@@ -72,6 +78,8 @@ services:
         restart: unless-stopped
 
     server:
+        expose:
+          - "3000"
         container_name: openstatus-server
         build:
             context: .
@@ -98,6 +106,8 @@ services:
         restart: unless-stopped
 
     private-location:
+        expose:
+          - "8080"
         container_name: openstatus-private-location
         build:
             context: apps/private-location
@@ -124,6 +134,8 @@ services:
         restart: unless-stopped
 
     dashboard:
+        expose:
+          - "3000"
         container_name: openstatus-dashboard
         build:
             context: .
@@ -154,6 +166,8 @@ services:
         restart: unless-stopped
 
     status-page:
+        expose:
+          - "3000"
         container_name: openstatus-status-page
         build:
             context: .
