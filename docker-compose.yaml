@@ -19,33 +19,28 @@ services:
       start_period: 10s
 
   db-migrate:
-    image: node:20-bookworm-slim
+    image: oven/bun:1.3.6
     environment:
       - DATABASE_URL=http://libsql:8080
       - DATABASE_AUTH_TOKEN=
     depends_on:
       libsql:
         condition: service_healthy
-    user: "0:0"
     working_dir: /work
-    entrypoint: ["bash", "-c"]
     command:
+      - sh
+      - -c
       - |
-        set -ex
-        apt-get update -qq
-        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates curl git unzip 1>/dev/null
-        curl -fsSL https://bun.sh/install | bash
-        export PATH=/root/.bun/bin:$PATH
-        bun --version
-        echo "wait for libsql..."
-        for i in $(seq 1 30); do curl -fsSI http://libsql:8080/health 2>/dev/null && break || curl -fsSI http://libsql:8080/ 2>/dev/null && break; sleep 1; done
-        echo "clone openstatus..."
-        git clone --depth=1 https://github.com/openstatusHQ/openstatus.git /work
+        set -e
+        apt-get update -qq && apt-get install -y -qq curl ca-certificates >/dev/null
+        echo "fetching openstatus repo for migration scripts..."
+        curl -sL https://github.com/openstatusHQ/openstatus/archive/refs/heads/main.tar.gz | tar xz -C /work --strip-components=1
         cd /work/packages/db
-        bun install
+        bun install --silent
         bun run migrate
         echo "migrations complete."
     restart: 'no'
+
 
 
   workflows:
@@ -200,4 +195,5 @@ services:
 
 volumes:
   openstatus-libsql:
+
 
