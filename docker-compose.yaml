@@ -74,6 +74,7 @@ services:
       - PORT=3000
       - NODE_ENV=production
       - FLY_REGION=ams
+      - TINYBIRD_URL=http://tinybird:7181
       - UNKEY_API_ID=${SERVICE_PASSWORD_UNKEYAPI}
       - UNKEY_TOKEN=${SERVICE_PASSWORD_UNKEYTOKEN}
       - TINY_BIRD_API_KEY=${SERVICE_PASSWORD_TINYBIRD}
@@ -131,6 +132,7 @@ services:
       - QSTASH_NEXT_SIGNING_KEY=${SERVICE_PASSWORD_QSTASHNEXT}
       - QSTASH_URL=https://qstash.upstash.io/v1/publish/
       - TINY_BIRD_API_KEY=${SERVICE_PASSWORD_TINYBIRD}
+      - TINYBIRD_URL=http://tinybird:7181
       - GCP_PROJECT_ID=self-hosted
       - GCP_LOCATION=self-hosted
       - GCP_CLIENT_EMAIL=self-hosted@self-hosted.iam
@@ -191,6 +193,7 @@ services:
       - UPSTASH_REDIS_REST_URL=http://localhost:6379
       - UPSTASH_REDIS_REST_TOKEN=${SERVICE_PASSWORD_REDISTOKEN}
       - TINY_BIRD_API_KEY=${SERVICE_PASSWORD_TINYBIRD}
+      - TINYBIRD_URL=http://tinybird:7181
       - STRIPE_SECRET_KEY=${SERVICE_PASSWORD_STRIPESEC}
       - PROJECT_ID_VERCEL=self-hosted
       - TEAM_ID_VERCEL=self-hosted
@@ -199,7 +202,6 @@ services:
       - NEXT_PUBLIC_OPENPANEL_CLIENT_ID=self-hosted
       - OPENPANEL_CLIENT_SECRET=self-hosted
       - TURBO_ENV_MODE=loose
-      - NOOP_UPTIME=true
       - NEXT_PUBLIC_SENTRY_DSN=
       - SENTRY_AUTH_TOKEN=
     depends_on:
@@ -319,7 +321,6 @@ services:
 
 volumes:
   openstatus-libsql:
-
 
 
 
