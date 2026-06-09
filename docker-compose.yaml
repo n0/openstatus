@@ -54,6 +54,10 @@ services:
       - DATABASE_AUTH_TOKEN=
       - PORT=3000
       - CRON_SECRET=${SERVICE_PASSWORD_CRONSECRET}
+      - UPSTASH_REDIS_REST_URL=https://self-hosted.invalid
+      - UPSTASH_REDIS_REST_TOKEN=self-hosted
+      - QSTASH_TOKEN=self-hosted
+      - SCREENSHOT_SERVICE_URL=https://self-hosted.invalid
       - AXIOM_TOKEN=
       - AXIOM_DATASET=
     depends_on:
@@ -221,7 +225,7 @@ services:
         echo "upgrading all workspaces to scale plan..."
         curl -sf -X POST http://libsql:8080/v2/pipeline \
           -H "Content-Type: application/json" \
-          -d '{"requests":[{"type":"execute","stmt":{"sql":"UPDATE workspace SET plan = \"scale\"; UPDATE page SET published = 1, slug = \"status.uswap.net\" WHERE id = 1"}},{"type":"close"}]}'
+          -d '{"requests":[{"type":"execute","stmt":{"sql":"UPDATE workspace SET plan = \"scale\""}},{"type":"execute","stmt":{"sql":"UPDATE page SET published = 1, slug = \"status.uswap.net\" WHERE id = 1"}},{"type":"close"}]}'
         echo
         echo "verify:"
         curl -s -X POST http://libsql:8080/v2/pipeline \
@@ -255,6 +259,7 @@ services:
     environment:
       - DB_URL=http://libsql:8080
       - TINYBIRD_URL=http://tinybird:7181
+      - TINYBIRD_TOKEN=${SERVICE_PASSWORD_TINYBIRD}
       - GIN_MODE=release
       - PORT=8080
     depends_on:
@@ -329,7 +334,6 @@ volumes:
   openstatus-libsql:
   openstatus-tinybird-clickhouse:
   openstatus-tinybird-metadata:
-
 
 
 
