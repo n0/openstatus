@@ -4,7 +4,7 @@ NODE endpoint
 SQL >
 
     %
-    SELECT *
+    SELECT * REPLACE(if(trigger IN ('cron', 'api'), trigger, 'cron') AS trigger)
     FROM mv__http_full_14d__v0
     WHERE
         monitorId = {{ String(monitorId, '1', required=True) }}

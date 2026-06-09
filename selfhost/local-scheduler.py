@@ -128,7 +128,7 @@ def run_monitor(monitor, now_ms):
         "degradedAfter": int(monitor.get("degraded_after") or 0),
         "retry": int(monitor.get("retry") or 1),
         "followRedirects": bool(monitor.get("follow_redirects") if monitor.get("follow_redirects") is not None else True),
-        "trigger": "self-host-cron",
+        "trigger": "cron",
     }
     post_json(CHECKER_URL, payload, {"Authorization": f"Basic {CRON_SECRET}"}, timeout=60)
 
