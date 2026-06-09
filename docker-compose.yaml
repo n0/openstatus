@@ -308,11 +308,7 @@ services:
       workflows:
         condition: service_started
     healthcheck:
-      test: ["CMD-SHELL", "exit 0"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
+      disable: true
     restart: unless-stopped
 
 
@@ -338,5 +334,4 @@ volumes:
   openstatus-libsql:
   openstatus-tinybird-clickhouse:
   openstatus-tinybird-metadata:
-
 
