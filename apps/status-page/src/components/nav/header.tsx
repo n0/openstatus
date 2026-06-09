@@ -74,11 +74,7 @@ function getStatusUpdateTypes(page: Page): StatusUpdateType[] {
     return ["email"] as const;
   }
 
-  if (page?.workspacePlan === "free") {
-    return ["slack", "rss", "json"] as const;
-  }
-
-  return ["email", "slack", "rss", "json"] as const;
+  return ["rss", "json"] as const;
 }
 
 export function Header({
