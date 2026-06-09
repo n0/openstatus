@@ -106,7 +106,11 @@ export const statusPageRouter = createTRPCRouter({
               },
               group: true,
             },
-            orderBy: (pageComponents, { asc }) => asc(pageComponents.order),
+            orderBy: (pageComponents, { asc }) => [
+              asc(pageComponents.groupOrder),
+              asc(pageComponents.order),
+              asc(pageComponents.id),
+            ],
           },
           pageComponentGroups: true,
         },
@@ -441,7 +445,11 @@ export const statusPageRouter = createTRPCRouter({
               monitor: { with: { incidents: true } },
               group: true,
             },
-            orderBy: (pageComponents, { asc }) => asc(pageComponents.order),
+            orderBy: (pageComponents, { asc }) => [
+              asc(pageComponents.groupOrder),
+              asc(pageComponents.order),
+              asc(pageComponents.id),
+            ],
           },
           pageComponentGroups: true,
         },
@@ -851,6 +859,11 @@ export const statusPageRouter = createTRPCRouter({
             with: {
               monitor: true,
             },
+            orderBy: (pageComponents, { asc }) => [
+              asc(pageComponents.groupOrder),
+              asc(pageComponents.order),
+              asc(pageComponents.id),
+            ],
           },
         },
       });

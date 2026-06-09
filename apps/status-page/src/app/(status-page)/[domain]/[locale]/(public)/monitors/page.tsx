@@ -33,7 +33,35 @@ export default function Page() {
 
   if (!page) return null;
 
-  const publicMonitors = page.monitors.filter((monitor) => monitor.public);
+  const componentOrderByMonitorId = new Map(
+    page.pageComponents
+      .filter((component) => component.monitorId != null)
+      .map((component) => [
+        component.monitorId,
+        {
+          groupOrder: component.groupOrder ?? 0,
+          order: component.order ?? 0,
+          id: component.id,
+        },
+      ]),
+  );
+
+  const publicMonitors = page.monitors
+    .filter((monitor) => monitor.public)
+    .sort((a, b) => {
+      const aOrder = componentOrderByMonitorId.get(a.id);
+      const bOrder = componentOrderByMonitorId.get(b.id);
+
+      return (
+        (aOrder?.groupOrder ?? Number.MAX_SAFE_INTEGER) -
+          (bOrder?.groupOrder ?? Number.MAX_SAFE_INTEGER) ||
+        (aOrder?.order ?? Number.MAX_SAFE_INTEGER) -
+          (bOrder?.order ?? Number.MAX_SAFE_INTEGER) ||
+        (aOrder?.id ?? Number.MAX_SAFE_INTEGER) -
+          (bOrder?.id ?? Number.MAX_SAFE_INTEGER) ||
+        a.name.localeCompare(b.name)
+      );
+    });
 
   return (
     <Status>
