@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
@@ -28,9 +29,41 @@ type UpdateData struct {
 
 func UpdateStatus(ctx context.Context, updateData UpdateData) error {
 
-	url := "https://openstatus-workflows.fly.dev/updateStatus"
 	basic := "Basic " + os.Getenv("CRON_SECRET")
-	payloadBuf := new(bytes.Buffer)
+	payloadBytes, err := json.Marshal(updateData)
+	if err != nil {
+		log.Ctx(ctx).Error().Err(err).Msg("error while updating status")
+		return err
+	}
+
+	if workflowsURL := strings.TrimRight(os.Getenv("OPENSTATUS_WORKFLOWS_URL"), "/"); workflowsURL != "" {
+		req, err := http.NewRequestWithContext(
+			ctx,
+			http.MethodPost,
+			workflowsURL+"/updateStatus",
+			bytes.NewReader(payloadBytes),
+		)
+		if err != nil {
+			log.Ctx(ctx).Error().Err(err).Msg("error while creating local status update request")
+			return err
+		}
+		req.Header.Set("Authorization", basic)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			log.Ctx(ctx).Error().Err(err).Msg("error while sending local status update")
+			return err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return fmt.Errorf("local updateStatus returned HTTP %d", resp.StatusCode)
+		}
+		return nil
+	}
+
+	url := "https://openstatus-workflows.fly.dev/updateStatus"
+	payloadBuf := bytes.NewBuffer(payloadBytes)
 	c := os.Getenv("GCP_PRIVATE_KEY")
 	c = strings.ReplaceAll(c, "\\n", "\n")
 	opts := &auth.Options2LO{
@@ -60,10 +93,6 @@ func UpdateStatus(ctx context.Context, updateData UpdateData) error {
 	}
 	defer client.Close()
 
-	if err := json.NewEncoder(payloadBuf).Encode(updateData); err != nil {
-		log.Ctx(ctx).Error().Err(err).Msg("error while updating status")
-		return err
-	}
 	projectID := os.Getenv("GCP_PROJECT_ID")
 	queuePath := fmt.Sprintf("projects/%s/locations/europe-west1/queues/alerting", projectID)
 	req := &taskspb.CreateTaskRequest{
