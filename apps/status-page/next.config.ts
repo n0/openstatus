@@ -7,7 +7,7 @@ const isDev = process.env.NODE_ENV === "development";
 
 const cspHeader = `
     default-src 'self';
-    script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""};
+    script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com${isDev ? " 'unsafe-eval'" : ""};
     style-src 'self' 'unsafe-inline';
     img-src *;
     font-src 'self';
@@ -15,7 +15,7 @@ const cspHeader = `
     base-uri 'self';
     form-action 'self';
     frame-ancestors *;
-    connect-src 'self' https://*.ingest.us.sentry.io;
+    connect-src 'self' https://*.ingest.us.sentry.io https://cloudflareinsights.com https://*.cloudflareinsights.com;
     worker-src 'self' blob:;
     upgrade-insecure-requests;
     `;
