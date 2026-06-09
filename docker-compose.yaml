@@ -48,7 +48,8 @@ services:
     image: ghcr.io/openstatushq/openstatus-workflows:latest
     environment:
       - TINYBIRD_URL=http://tinybird:7181
-      - TINY_BIRD_API_KEY=admin local_testing@tinybird.co
+      - TINY_BIRD_API_KEY=${SERVICE_PASSWORD_TINYBIRD}
+      - RESEND_API_KEY=${SERVICE_PASSWORD_RESENDKEY}
       - DATABASE_URL=http://libsql:8080
       - DATABASE_AUTH_TOKEN=
       - PORT=3000
@@ -77,7 +78,7 @@ services:
       - TINYBIRD_URL=http://tinybird:7181
       - UNKEY_API_ID=${SERVICE_PASSWORD_UNKEYAPI}
       - UNKEY_TOKEN=${SERVICE_PASSWORD_UNKEYTOKEN}
-      - TINY_BIRD_API_KEY=admin local_testing@tinybird.co
+      - TINY_BIRD_API_KEY=${SERVICE_PASSWORD_TINYBIRD}
       - UPSTASH_REDIS_REST_URL=http://localhost:6379
       - UPSTASH_REDIS_REST_TOKEN=${SERVICE_PASSWORD_REDISTOKEN}
       - CRON_SECRET=${SERVICE_PASSWORD_CRONSECRET}
@@ -131,7 +132,7 @@ services:
       - QSTASH_CURRENT_SIGNING_KEY=${SERVICE_PASSWORD_QSTASHCUR}
       - QSTASH_NEXT_SIGNING_KEY=${SERVICE_PASSWORD_QSTASHNEXT}
       - QSTASH_URL=https://qstash.upstash.io/v1/publish/
-      - TINY_BIRD_API_KEY=admin local_testing@tinybird.co
+      - TINY_BIRD_API_KEY=${SERVICE_PASSWORD_TINYBIRD}
       - TINYBIRD_URL=http://tinybird:7181
       - GCP_PROJECT_ID=self-hosted
       - GCP_LOCATION=self-hosted
@@ -192,9 +193,9 @@ services:
       - UNKEY_TOKEN=${SERVICE_PASSWORD_UNKEYTOKEN}
       - UPSTASH_REDIS_REST_URL=http://localhost:6379
       - UPSTASH_REDIS_REST_TOKEN=${SERVICE_PASSWORD_REDISTOKEN}
-      - TINY_BIRD_API_KEY=admin local_testing@tinybird.co
+      - TINY_BIRD_API_KEY=${SERVICE_PASSWORD_TINYBIRD}
       - TINYBIRD_URL=http://tinybird:7181
-      - TINYBIRD_TOKEN=admin local_testing@tinybird.co
+      - TINYBIRD_TOKEN=${SERVICE_PASSWORD_TINYBIRD}
       - STRIPE_SECRET_KEY=${SERVICE_PASSWORD_STRIPESEC}
       - PROJECT_ID_VERCEL=self-hosted
       - TEAM_ID_VERCEL=self-hosted
@@ -235,6 +236,10 @@ services:
       - "7181"
     environment:
       - COMPATIBILITY_MODE=1
+      - TB_LOCAL_WORKSPACE_TOKEN=${SERVICE_PASSWORD_TINYBIRD}
+    volumes:
+      - openstatus-tinybird-clickhouse:/var/lib/clickhouse
+      - openstatus-tinybird-metadata:/redis-data
     healthcheck:
       test: ["CMD-SHELL", "exit 0"]
       interval: 30s
@@ -278,7 +283,7 @@ services:
       - PORT=8080
       - CRON_SECRET=${SERVICE_PASSWORD_CRONSECRET}
       - TINYBIRD_URL=http://tinybird:7181
-      - TINYBIRD_TOKEN=admin local_testing@tinybird.co
+      - TINYBIRD_TOKEN=${SERVICE_PASSWORD_TINYBIRD}
       - OPENSTATUS_WORKFLOWS_URL=http://workflows:3000
       - CLOUD_PROVIDER=fly
       - FLY_REGION=ams
@@ -322,9 +327,8 @@ services:
 
 volumes:
   openstatus-libsql:
-
-
-
+  openstatus-tinybird-clickhouse:
+  openstatus-tinybird-metadata:
 
 
 
