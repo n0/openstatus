@@ -54,6 +54,10 @@ services:
       - DATABASE_AUTH_TOKEN=
       - PORT=3000
       - CRON_SECRET=${SERVICE_PASSWORD_CRONSECRET}
+      - GCP_PROJECT_ID=openstatus-self-hosted
+      - GCP_LOCATION=europe-west1
+      - GCP_CLIENT_EMAIL=self-hosted@openstatus.local
+      - GCP_PRIVATE_KEY=
       - UPSTASH_REDIS_REST_URL=https://self-hosted.invalid
       - UPSTASH_REDIS_REST_TOKEN=self-hosted
       - QSTASH_TOKEN=self-hosted
@@ -334,6 +338,5 @@ volumes:
   openstatus-libsql:
   openstatus-tinybird-clickhouse:
   openstatus-tinybird-metadata:
-
 
 
