@@ -15,8 +15,9 @@ export type { DefaultSession };
 export const { handlers, signIn, signOut, auth } = NextAuth({
   // debug: true,
   adapter,
-  providers:
-    process.env.NODE_ENV === "development" || process.env.SELF_HOST === "true"
+  providers: process.env.ALLOWED_GITHUB_USERNAMES
+    ? [GitHubProvider]
+    : process.env.NODE_ENV === "development" || process.env.SELF_HOST === "true"
       ? [GitHubProvider, GoogleProvider, ResendProvider]
       : [GitHubProvider, GoogleProvider],
   callbacks: {
@@ -39,12 +40,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return baseUrl;
     },
     async signIn(params) {
-      // Self-host allowlist: only authorize GitHub usernames listed in ALLOWED_GITHUB_USERNAMES (comma-separated).
-      // Empty/unset = no restriction (preserves OSS default behavior).
-      if (params.account?.provider === "github" && process.env.ALLOWED_GITHUB_USERNAMES) {
-        const allowed = process.env.ALLOWED_GITHUB_USERNAMES.split(",").map((s) => s.trim()).filter(Boolean);
+      // Self-host allowlist: only authorize GitHub usernames listed in ALLOWED_GITHUB_USERNAMES.
+      const allowedGithubUsernames = process.env.ALLOWED_GITHUB_USERNAMES?.split(",")
+        .map((s) => s.trim())
+        .filter(Boolean) ?? [];
+      if (allowedGithubUsernames.length > 0) {
+        if (params.account?.provider !== "github") {
+          console.warn(`[auth] login rejected for provider "${params.account?.provider}" while ALLOWED_GITHUB_USERNAMES is set`);
+          return false;
+        }
         const login = (params.profile as { login?: string } | undefined)?.login;
-        if (!login || !allowed.includes(login)) {
+        if (!login || !allowedGithubUsernames.includes(login)) {
           console.warn(`[auth] github login rejected for username "${login}" (not in ALLOWED_GITHUB_USERNAMES)`);
           return false;
         }
@@ -150,4 +156,3 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   // secret: process.env.AUTH_SECRET, // default is `AUTH_SECRET`
   debug: process.env.NODE_ENV === "development",
 });
-
