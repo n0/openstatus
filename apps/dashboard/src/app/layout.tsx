@@ -45,6 +45,11 @@ const commitMono = LocalFont({
   variable: "--font-commit-mono",
 });
 
+const enableOpenPanel =
+  process.env.SELF_HOST !== "true" &&
+  process.env.NEXT_PUBLIC_OPENPANEL_CLIENT_ID &&
+  process.env.NEXT_PUBLIC_OPENPANEL_CLIENT_ID !== "test";
+
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
@@ -103,9 +108,9 @@ export default async function RootLayout({
                 {children}
                 <TailwindIndicator />
                 <Toaster richColors expand />
-                {process.env.NEXT_PUBLIC_OPENPANEL_CLIENT_ID && (
+                {enableOpenPanel && (
                   <OpenPanelComponent
-                    clientId={process.env.NEXT_PUBLIC_OPENPANEL_CLIENT_ID}
+                    clientId={process.env.NEXT_PUBLIC_OPENPANEL_CLIENT_ID ?? ""}
                     trackScreenViews
                     trackOutgoingLinks
                     trackAttributes
