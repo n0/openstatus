@@ -1,4 +1,4 @@
-import { defaultMetadata, ogMetadata, twitterMetadata } from "@/app/metadata";
+import { defaultMetadata } from "@/app/metadata";
 import { PasswordWrapper } from "@/components/password-wrapper";
 import {
   FloatingButton,
@@ -98,6 +98,9 @@ export async function generateMetadata({
 
   return {
     ...defaultMetadata,
+    metadataBase: page?.customDomain
+      ? new URL(`https://${page.customDomain}`)
+      : new URL(`https://${page.slug}.openstatus.dev`),
     title: {
       template: `%s | ${page.title}`,
       default: page?.title,
@@ -115,14 +118,12 @@ export async function generateMetadata({
         : `https://${page.slug}.openstatus.dev`,
     },
     twitter: {
-      ...twitterMetadata,
-      images: [`/api/og/page?slug=${page?.slug}`],
+      card: "summary",
       title: page?.title,
       description: page?.description,
     },
     openGraph: {
-      ...ogMetadata,
-      images: [`/api/og/page?slug=${page?.slug}`],
+      type: "website",
       title: page?.title,
       description: page?.description,
     },
