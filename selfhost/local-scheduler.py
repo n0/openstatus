@@ -7,6 +7,7 @@ import urllib.request
 from datetime import datetime, timezone
 
 LIBSQL_URL = os.environ.get("LIBSQL_URL", "http://libsql:8080").rstrip("/")
+CHECKER_BASE_URL = os.environ.get("CHECKER_BASE_URL")
 CHECKER_URL = os.environ.get("CHECKER_URL", "http://checker:8080/checker/http?data=true")
 CRON_SECRET = os.environ.get("CRON_SECRET", "")
 INTERVAL_SECONDS = int(os.environ.get("INTERVAL_SECONDS", "60"))
@@ -92,14 +93,36 @@ def parse_json_field(value, fallback):
     except Exception:
         return fallback
 
+def checker_base_url():
+    if CHECKER_BASE_URL:
+        return CHECKER_BASE_URL.rstrip("/")
+    marker = "/checker/"
+    if marker in CHECKER_URL:
+        return CHECKER_URL.split(marker, 1)[0].rstrip("/")
+    return CHECKER_URL.rstrip("/")
+
+def checker_url(job_type):
+    if job_type not in {"http", "tcp", "dns"}:
+        raise RuntimeError(f"unsupported monitor job_type {job_type!r}")
+    return f"{checker_base_url()}/checker/{job_type}?data=true"
+
+def parse_bool(value, default=False):
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    return str(value).lower() in {"1", "true", "yes", "on"}
+
 def active_monitors():
     sql = """
-    SELECT id, workspace_id, url, method, status, body, headers, assertions,
+    SELECT id, workspace_id, job_type, url, method, status, body, headers, assertions,
            timeout, degraded_after, retry, follow_redirects, regions, periodicity
     FROM monitor
     WHERE active = 1
       AND deleted_at IS NULL
-      AND job_type = 'http'
+      AND job_type IN ('http', 'tcp', 'dns')
       AND periodicity IN ('30s','1m','5m','10m','30m','1h')
     ORDER BY id
     """.replace("\n", " ")
@@ -110,6 +133,7 @@ def should_run(periodicity, now_ms):
     return int(now_ms / 1000) % seconds < INTERVAL_SECONDS
 
 def run_monitor(monitor, now_ms):
+    job_type = monitor.get("job_type") or monitor.get("jobType")
     headers = parse_json_field(monitor.get("headers"), [])
     if isinstance(headers, dict):
         headers = [{"key": k, "value": str(v)} for k, v in headers.items()]
@@ -127,12 +151,23 @@ def run_monitor(monitor, now_ms):
         "timeout": int(monitor.get("timeout") or 45000),
         "degradedAfter": int(monitor.get("degraded_after") or 0),
         "retry": int(monitor.get("retry") or 1),
-        "followRedirects": bool(monitor.get("follow_redirects") if monitor.get("follow_redirects") is not None else True),
         "trigger": "cron",
     }
-    post_json(CHECKER_URL, payload, {"Authorization": f"Basic {CRON_SECRET}"}, timeout=60)
+    if job_type == "http":
+        payload.update({
+            "url": monitor.get("url"),
+            "method": monitor.get("method") or "GET",
+            "body": monitor.get("body") or "",
+            "headers": headers or [],
+            "followRedirects": parse_bool(monitor.get("follow_redirects"), True),
+        })
+    elif job_type in {"tcp", "dns"}:
+        payload["uri"] = monitor.get("url")
+    else:
+        raise RuntimeError(f"unsupported monitor job_type {job_type!r}")
+    post_json(checker_url(job_type), payload, {"Authorization": f"Basic {CRON_SECRET}"}, timeout=60)
 
-log("starting self-host local scheduler", f"libsql={LIBSQL_URL}", f"checker={CHECKER_URL}", f"interval={INTERVAL_SECONDS}s")
+log("starting self-host local scheduler", f"libsql={LIBSQL_URL}", f"checker_base={checker_base_url()}", f"interval={INTERVAL_SECONDS}s")
 while True:
     now_ms = int(time.time() * 1000)
     try:

@@ -90,6 +90,7 @@ services:
       - UPSTASH_REDIS_REST_URL=http://localhost:6379
       - UPSTASH_REDIS_REST_TOKEN=${SERVICE_PASSWORD_REDISTOKEN}
       - CRON_SECRET=${SERVICE_PASSWORD_CRONSECRET}
+      - CHECKER_BASE_URL=http://checker:8080
       - SCREENSHOT_SERVICE_URL=https://example.invalid
       - QSTASH_TOKEN=${SERVICE_PASSWORD_QSTASHTOKEN}
       - SUPER_ADMIN_TOKEN=${SERVICE_PASSWORD_SUPERADMIN}
@@ -294,7 +295,7 @@ services:
       - TINYBIRD_URL=http://tinybird:7181
       - TINYBIRD_TOKEN=${SERVICE_PASSWORD_TINYBIRD}
       - OPENSTATUS_WORKFLOWS_URL=http://workflows:3000
-      - CLOUD_PROVIDER=fly
+      - CLOUD_PROVIDER=self-host
       - FLY_REGION=ams
       - REGION=ams
       - LOG_LEVEL=info
@@ -324,7 +325,7 @@ services:
         condition: service_started
     environment:
       - LIBSQL_URL=http://libsql:8080
-      - CHECKER_URL=http://checker:8080/checker/http?data=true
+      - CHECKER_BASE_URL=http://checker:8080
       - CRON_SECRET=${SERVICE_PASSWORD_CRONSECRET}
       - INTERVAL_SECONDS=60
     restart: unless-stopped
@@ -334,4 +335,3 @@ volumes:
   openstatus-libsql:
   openstatus-tinybird-clickhouse:
   openstatus-tinybird-metadata:
-

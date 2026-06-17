@@ -72,11 +72,15 @@ export function getCheckerUrl(
     data: false,
   },
 ): string {
+  const checkerBaseUrl =
+    process.env.CHECKER_BASE_URL?.replace(/\/+$/, "") ??
+    "https://openstatus-checker.fly.dev";
+
   switch (monitor.jobType) {
     case "http":
-      return `https://openstatus-checker.fly.dev/checker/http?monitor_id=${monitor.id}&trigger=${opts.trigger}&data=${opts.data}`;
+      return `${checkerBaseUrl}/checker/http?monitor_id=${monitor.id}&trigger=${opts.trigger}&data=${opts.data}`;
     case "tcp":
-      return `https://openstatus-checker.fly.dev/checker/tcp?monitor_id=${monitor.id}&trigger=${opts.trigger}&data=${opts.data}`;
+      return `${checkerBaseUrl}/checker/tcp?monitor_id=${monitor.id}&trigger=${opts.trigger}&data=${opts.data}`;
     default:
       throw new OpenStatusApiError({
         code: "BAD_REQUEST",
