@@ -186,6 +186,24 @@ describe("resolveRoute", () => {
     });
   });
 
+  describe("self-hosted custom-domain rewrite pass", () => {
+    test("preserves dotted path prefix instead of primary forwarded host", () => {
+      const result = resolveRoute({
+        host: "status.uswap.net",
+        urlHost: "status.uswap.net",
+        pathname: "/status.reusable.email/en/feed/json",
+        preferPathPrefix: true,
+      });
+      expect(result).toEqual({
+        type: "pathname",
+        prefix: "status.reusable.email",
+        locale: "en",
+        localeExplicit: true,
+        rewritePath: "/status.reusable.email/en/feed/json",
+      });
+    });
+  });
+
   // Seed page 1: slug "status", customDomain ""
   describe('hostname routing — slug "status" (subdomain only, no custom domain)', () => {
     test("status.localhost:3000/ → /status/en", () => {

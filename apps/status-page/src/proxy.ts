@@ -23,6 +23,7 @@ export default auth(async (req) => {
     host,
     urlHost: url.host,
     pathname: url.pathname,
+    preferPathPrefix: isSelfHosted,
   });
 
   if (!initialRoute) {

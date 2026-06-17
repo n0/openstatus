@@ -21,6 +21,7 @@ export function resolveRoute({
   host,
   urlHost,
   pathname,
+  preferPathPrefix = false,
 }: {
   /** x-forwarded-host header value */
   host: string | null;
@@ -28,9 +29,16 @@ export function resolveRoute({
   urlHost: string;
   /** req.nextUrl.pathname */
   pathname: string;
+  /**
+   * In self-hosted proxy chains, an earlier rewrite can already carry the
+   * custom domain in the path.
+   */
+  preferPathPrefix?: boolean;
 }): ResolvedRoute | null {
   const hostnames = host?.split(/[.:]/) ?? urlHost.split(/[.:]/);
   const pathnames = pathname.split("/");
+  const pathPrefix = (pathnames[1] ?? "").toLowerCase();
+  const pathPrefixLooksLikeCustomDomain = pathPrefix.includes(".");
 
   // Prefer x-forwarded-host for custom-domain detection (behind reverse proxy/CDN,
   // req.nextUrl.host may be an internal host, not the real custom domain)
@@ -39,7 +47,10 @@ export function resolveRoute({
   let prefix: string;
   let type: RouteType;
 
-  if (
+  if (preferPathPrefix && pathPrefixLooksLikeCustomDomain) {
+    prefix = pathPrefix;
+    type = "pathname";
+  } else if (
     hostnames.length > 2 &&
     hostnames[0] !== "www" &&
     !urlHost.endsWith(".vercel.app")
@@ -51,7 +62,10 @@ export function resolveRoute({
     type = "pathname";
   }
 
-  if (subdomain !== null) {
+  if (
+    subdomain !== null &&
+    !(preferPathPrefix && pathPrefixLooksLikeCustomDomain)
+  ) {
     prefix = subdomain.toLowerCase();
   }
 
@@ -130,4 +144,3 @@ export function resolveRoute({
     rewritePath: `/${prefix}/${locale}${rest ? `/${rest}` : ""}`,
   };
 }
-
