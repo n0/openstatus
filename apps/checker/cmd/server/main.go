@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -185,7 +186,7 @@ func main() {
 	case "railway":
 		region = fmt.Sprintf("railway_%s", env("RAILWAY_REPLICA_REGION", env("REGION", "local")))
 	case "self-host":
-		region = env("REGION", "local")
+		region = selfHostRegion()
 	default:
 		log.Fatal().Msgf("unsupported cloud provider: %s", cloudProvider)
 	}
@@ -278,4 +279,19 @@ func env(key, fallback string) string {
 	}
 
 	return fallback
+}
+
+func selfHostRegion() string {
+	if region := env("OPENSTATUS_REGION", ""); region != "" {
+		return region
+	}
+
+	region := env("REGION", "")
+	if region == "" || region == "local" {
+		region = env("FLY_REGION", "ams")
+	}
+	if strings.HasPrefix(region, "REGION_") {
+		return region
+	}
+	return fmt.Sprintf("REGION_FLY_%s", strings.ToUpper(strings.ReplaceAll(region, "-", "_")))
 }
