@@ -21,9 +21,9 @@ import (
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	// otelz "go.opentelemetry.io/contrib/bridges/otelzerolog"
-	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/attribute"
 	otlploghttp "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
+	"go.opentelemetry.io/otel/log/global"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
@@ -144,7 +144,7 @@ func Logger() gin.HandlerFunc {
 
 		if shouldSample(event) {
 			attrs := MapToAttrs(event)
-			slog.LogAttrs(c.Request.Context(),slog.LevelInfo, "request done", attrs...)
+			slog.LogAttrs(c.Request.Context(), slog.LevelInfo, "request done", attrs...)
 		}
 
 		log.Debug().
@@ -184,6 +184,8 @@ func main() {
 
 	case "railway":
 		region = fmt.Sprintf("railway_%s", env("RAILWAY_REPLICA_REGION", env("REGION", "local")))
+	case "self-host":
+		region = env("REGION", "local")
 	default:
 		log.Fatal().Msgf("unsupported cloud provider: %s", cloudProvider)
 	}
@@ -215,7 +217,6 @@ func main() {
 	logProvider := sdklog.NewLoggerProvider(
 		sdklog.WithResource(res),
 		sdklog.WithProcessor(sdklog.NewBatchProcessor(exporter)),
-
 	)
 	defer logProvider.Shutdown(ctx)
 
