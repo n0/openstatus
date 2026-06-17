@@ -15,7 +15,9 @@ const isSelfHosted = process.env.SELF_HOST === "true";
 export default auth(async (req) => {
   const url = req.nextUrl.clone();
   const passthroughResponse = NextResponse.next();
-  const host = req.headers.get("x-forwarded-host");
+  const forwardedHost = req.headers.get("x-forwarded-host");
+  const requestHost = req.headers.get("host");
+  const host = isSelfHosted ? (requestHost ?? forwardedHost) : forwardedHost;
 
   const initialRoute = resolveRoute({
     host,
@@ -51,6 +53,7 @@ export default auth(async (req) => {
 
   console.log("[proxy] request", {
     host,
+    forwardedHost,
     pathname: url.pathname,
     slug: _page.slug,
     customDomain: _page.customDomain || null,
