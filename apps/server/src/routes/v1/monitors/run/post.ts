@@ -17,6 +17,104 @@ import type { monitorsApi } from "..";
 import { ParamsSchema, TriggerResult } from "../schema";
 import { QuerySchema } from "./schema";
 
+const httpTimingFallback = {
+  dnsStart: 0,
+  dnsDone: 0,
+  connectStart: 0,
+  connectDone: 0,
+  tlsHandshakeStart: 0,
+  tlsHandshakeDone: 0,
+  firstByteStart: 0,
+  firstByteDone: 0,
+  transferStart: 0,
+  transferDone: 0,
+};
+
+function normalizeRegion(region: unknown, fallback: string) {
+  if (typeof region !== "string" || region.length === 0) {
+    return fallback;
+  }
+  if (region.startsWith("REGION_")) {
+    return region;
+  }
+  return `REGION_FLY_${region.replace(/-/g, "_").toUpperCase()}`;
+}
+
+function normalizeTriggerResult(
+  body: unknown,
+  jobType: string,
+  fallbackRegion: string,
+) {
+  const value =
+    body && typeof body === "object" && !Array.isArray(body)
+      ? ({ ...body } as Record<string, unknown>)
+      : ({ error: String(body ?? "empty checker response") } as Record<
+          string,
+          unknown
+        >);
+
+  const timestamp =
+    typeof value.timestamp === "number" ? value.timestamp : Date.now();
+  value.jobType = jobType;
+  value.region = normalizeRegion(value.region, fallbackRegion);
+  value.latency = typeof value.latency === "number" ? value.latency : 0;
+  value.timestamp = timestamp;
+  const rawError = value.error;
+  const rawErrorMessage = value.errorMessage;
+
+  if (jobType === "http") {
+    value.status =
+      typeof value.status === "number"
+        ? value.status
+        : typeof value.statusCode === "number"
+          ? value.statusCode
+          : 0;
+    value.timing =
+      value.timing && typeof value.timing === "object"
+        ? value.timing
+        : httpTimingFallback;
+    value.error =
+      typeof rawError === "string"
+        ? rawError
+        : typeof rawErrorMessage === "string"
+          ? rawErrorMessage
+          : null;
+  }
+
+  if (jobType === "tcp") {
+    value.timing =
+      value.timing && typeof value.timing === "object"
+        ? value.timing
+        : { tcpStart: timestamp, tcpDone: timestamp };
+    value.error =
+      typeof rawError === "number"
+        ? rawError
+        : typeof rawErrorMessage === "string" && rawErrorMessage
+          ? 1
+          : 0;
+    value.errorMessage =
+      typeof rawErrorMessage === "string"
+        ? rawErrorMessage
+        : typeof rawError === "string"
+          ? rawError
+          : null;
+  }
+
+  return value;
+}
+
+async function readCheckerBody(response: Response) {
+  const text = await response.text();
+  if (!text) {
+    return null;
+  }
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return text;
+  }
+}
+
 const postMonitor = createRoute({
   method: "post",
   tags: ["monitor"],
@@ -152,9 +250,18 @@ export function registerRunMonitor(api: typeof monitorsApi) {
     }
 
     const result = await Promise.all(allResult);
-    const bodies = await Promise.all(result.map((r) => r.json()));
+    const bodies = await Promise.all(result.map(readCheckerBody));
+    const normalizedBodies = bodies.map((body, index) =>
+      normalizeTriggerResult(
+        body,
+        row.jobType,
+        parseMonitor.data.regions[index] ??
+          parseMonitor.data.regions[0] ??
+          "REGION_FLY_AMS",
+      ),
+    );
 
-    const data = TriggerResult.array().safeParse(bodies);
+    const data = TriggerResult.array().safeParse(normalizedBodies);
 
     if (!data) {
       throw new HTTPException(400, { message: "Something went wrong" });
