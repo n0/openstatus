@@ -75,7 +75,10 @@ services:
       start_period: 30s
 
   server:
-    image: ghcr.io/openstatushq/openstatus-server:latest
+    image: openstatus-server-patched:latest
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
     environment:
       - SERVICE_FQDN_SERVER_3000
       - DATABASE_URL=http://libsql:8080
