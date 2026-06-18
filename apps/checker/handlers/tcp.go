@@ -90,11 +90,11 @@ func (h Handler) TCPHandler(c *gin.Context) {
 	if f {
 		t := e.(map[string]any)
 		t["checker"] = map[string]string{
-			"uri": req.URI,
+			"uri":          req.URI,
 			"workspace_id": req.WorkspaceID,
-			"monitor_id":req.MonitorID,
-			"trigger": trigger,
-			"type": "tcp",
+			"monitor_id":   req.MonitorID,
+			"trigger":      trigger,
+			"type":         "tcp",
 		}
 		c.Set("event", t)
 	}
@@ -208,6 +208,16 @@ func (h Handler) TCPHandler(c *gin.Context) {
 	}
 
 	if err := backoff.Retry(op, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), uint64(retry))); err != nil {
+		now := time.Now().UTC().UnixMilli()
+		response = checker.TCPResponse{
+			Timestamp:    now,
+			Timing:       checker.TCPResponseTiming{TCPStart: now, TCPDone: now},
+			Latency:      0,
+			Region:       h.Region,
+			JobType:      "tcp",
+			Error:        1,
+			ErrorMessage: err.Error(),
+		}
 
 		id, e := uuid.NewV7()
 		if e != nil {
