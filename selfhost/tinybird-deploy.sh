@@ -3,49 +3,40 @@
 # OpenStatus data project so the status-page uptime endpoints exist and the
 # checker's ingested ping/tcp/dns events flow through the materialized views.
 #
-# This is idempotent and tolerant: each datafile is pushed independently with
-# --force so a single bad/non-essential file never blocks the rest. The chain
-# required for the public status bars is:
+# Idempotent and tolerant: each datafile is pushed independently with --force so a
+# single bad/non-essential file never blocks the rest. Required chain for the
+# public status bars:
 #   ping_response__v8 -> aggregate__http_status_45d__v1 -> mv__http_status_45d__v1 -> endpoint__http_status_45d__v1
 # (and the tcp/dns equivalents).
+#
+# The data project files are baked into the image at /project (see
+# selfhost/tinybird-deploy.Dockerfile) so they are guaranteed present.
 
 set -u
 
 TB_HOST="${TINYBIRD_URL:-http://tinybird:7181}"
 PROJECT_DIR="${PROJECT_DIR:-/project}"
+TOKEN="${TB_TOKEN:-}"   # equals TB_LOCAL_WORKSPACE_TOKEN, the workspace admin token
 
 log() { echo "[tinybird-deploy] $*"; }
 
 cd "$PROJECT_DIR" || { log "FATAL: cannot cd to $PROJECT_DIR"; sleep infinity; }
 
-# 1. Wait for the local Tinybird API to answer and hand us the admin token.
-TOKEN=""
+log "project contents: datasources=$(ls datasources 2>/dev/null | wc -l) pipes=$(ls pipes 2>/dev/null | wc -l) endpoints=$(ls endpoints 2>/dev/null | wc -l)"
+
+# 1. Wait for Tinybird to be ready by retrying auth with the known workspace token.
 i=0
-while [ "$i" -lt 80 ]; do
-  TOKEN=$(python3 - "$TB_HOST" <<'PY' 2>/dev/null
-import sys, json, urllib.request
-host = sys.argv[1].rstrip("/")
-try:
-    with urllib.request.urlopen(host + "/tokens", timeout=5) as r:
-        print(json.load(r).get("workspace_admin_token", ""))
-except Exception:
-    print("")
-PY
-)
-  [ -n "$TOKEN" ] && { log "tinybird is ready (got admin token from /tokens)"; break; }
+until tb auth --host "$TB_HOST" --token "$TOKEN" >/tmp/auth.out 2>&1; do
   i=$((i + 1))
-  log "waiting for tinybird at $TB_HOST ... ($i)"
+  if [ "$i" -ge 80 ]; then
+    log "FATAL: tb auth never succeeded against $TB_HOST"
+    sed 's/^/[tinybird-deploy]   auth| /' /tmp/auth.out | tail -n 10
+    sleep infinity
+  fi
+  log "waiting for tinybird/auth at $TB_HOST ... ($i)"
   sleep 3
 done
-
-if [ -z "$TOKEN" ]; then
-  TOKEN="${TB_TOKEN:-}"
-  [ -n "$TOKEN" ] && log "falling back to TB_TOKEN env" || { log "FATAL: no token available"; sleep infinity; }
-fi
-
-# 2. Authenticate the CLI against the local container.
-log "authenticating CLI against $TB_HOST"
-tb auth --host "$TB_HOST" --token "$TOKEN" || { log "FATAL: tb auth failed"; sleep infinity; }
+log "authenticated against $TB_HOST"
 
 OK=0
 FAIL=0
@@ -65,8 +56,7 @@ push() {
   fi
 }
 
-# 3. Push in dependency order: raw + MV target datasources, then materialized
-#    aggregate pipes, then endpoint pipes.
+# 2. Push in dependency order: datasources, then materialized pipes, then endpoints.
 log "=== pushing datasources ==="
 for f in datasources/*.datasource; do push "$f"; done
 
@@ -80,7 +70,7 @@ log "================ SUMMARY ================"
 log "pushed OK: $OK   failed: $FAIL"
 [ -n "$FAILED_FILES" ] && log "failed files:$FAILED_FILES"
 
-# 4. Verify the essential status-bar endpoints exist.
+# 3. Verify the essential status-bar endpoints exist.
 log "=== verifying essential endpoints ==="
 for name in endpoint__http_status_45d__v1 endpoint__tcp_status_45d__v1 endpoint__dns_status_45d__v0; do
   if tb pipe ls 2>/dev/null | grep -q "$name"; then

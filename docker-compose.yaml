@@ -268,15 +268,14 @@ services:
   # status-page uptime bars have endpoints to query and the checker's ingested events
   # flow through the 45d materialized views. Purely additive; nothing depends on it.
   tinybird-deploy:
-    image: tinybirdco/tinybird-cli-docker:latest
-    entrypoint: ["sh", "/deploy.sh"]
+    image: openstatus-tinybird-deploy:latest
+    build:
+      context: .
+      dockerfile: selfhost/tinybird-deploy.Dockerfile
     environment:
       - TINYBIRD_URL=http://tinybird:7181
       - TB_TOKEN=${SERVICE_PASSWORD_TINYBIRD}
       - PROJECT_DIR=/project
-    volumes:
-      - ./packages/tinybird:/project
-      - ./selfhost/tinybird-deploy.sh:/deploy.sh:ro
     depends_on:
       tinybird:
         condition: service_started
