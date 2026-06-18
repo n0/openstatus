@@ -45,7 +45,10 @@ services:
 
 
   workflows:
-    image: ghcr.io/openstatushq/openstatus-workflows:latest
+    image: openstatus-workflows-patched:latest
+    build:
+      context: .
+      dockerfile: apps/workflows/Dockerfile
     environment:
       - TINYBIRD_URL=http://tinybird:7181
       - TINY_BIRD_API_KEY=${SERVICE_PASSWORD_TINYBIRD}
