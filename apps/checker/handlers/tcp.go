@@ -227,6 +227,7 @@ func (h Handler) TCPHandler(c *gin.Context) {
 		data := TCPData{
 			ID:            id.String(),
 			WorkspaceID:   workspaceId,
+			Timestamp:     now,
 			CronTimestamp: req.CronTimestamp,
 			ErrorMessage:  err.Error(),
 			Region:        h.Region,
