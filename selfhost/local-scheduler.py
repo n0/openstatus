@@ -208,8 +208,12 @@ def tinybird_diagnostics():
     for t in ("ping_response__v8", "tcp_response__v0", "dns_response__v0",
               "mv__http_status_45d__v1", "mv__tcp_status_45d__v1", "mv__dns_status_45d__v0"):
         log("tb-diag count", t, "=", tb_count(t))
-    log("tb-diag tcp_response__v0 schema:", tb_schema("tcp_response__v0"))
-    log("tb-diag mv__tcp_status_45d__v1 schema:", tb_schema("mv__tcp_status_45d__v1"))
+    for tbl in ("tcp_response__v0", "ping_response__v8"):
+        try:
+            r = tb_sql(f"SELECT monitorId, count() AS n FROM {tbl} GROUP BY monitorId ORDER BY monitorId")
+            log(f"tb-diag {tbl} per-monitor:", json.dumps(r.get("data", [])) if r else None)
+        except Exception as exc:  # noqa: BLE001
+            log(f"tb-diag {tbl} per-monitor ERR:", exc)
     try:
         r = tb_sql("SELECT monitorId, requestStatus, cronTimestamp FROM tcp_response__v0 ORDER BY timestamp DESC LIMIT 3")
         log("tb-diag tcp sample:", json.dumps(r.get("data", [])) if r else None)
@@ -279,8 +283,4 @@ while True:
         tinybird_diagnostics()
     except Exception as exc:  # noqa: BLE001
         log("tb-diag failed:", exc)
-    try:
-        print_deploy_log()
-    except Exception as exc:  # noqa: BLE001
-        log("tb-deploy-log failed:", exc)
     time.sleep(INTERVAL_SECONDS)
