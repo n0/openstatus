@@ -276,6 +276,8 @@ services:
       - TINYBIRD_URL=http://tinybird:7181
       - TB_TOKEN=${SERVICE_PASSWORD_TINYBIRD}
       - PROJECT_DIR=/project
+    volumes:
+      - openstatus-tbdeploy-log:/shared
     depends_on:
       tinybird:
         condition: service_started
@@ -355,6 +357,8 @@ services:
       - INTERVAL_SECONDS=60
       - TINYBIRD_URL=http://tinybird:7181
       - TB_TOKEN=${SERVICE_PASSWORD_TINYBIRD}
+    volumes:
+      - openstatus-tbdeploy-log:/shared:ro
     restart: unless-stopped
 
 
@@ -362,3 +366,4 @@ volumes:
   openstatus-libsql:
   openstatus-tinybird-clickhouse:
   openstatus-tinybird-metadata:
+  openstatus-tbdeploy-log:

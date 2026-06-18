@@ -234,8 +234,25 @@ def tinybird_diagnostics():
     except Exception as exc:  # noqa: BLE001
         log("tb-diag ops_log query ERR:", exc)
 
+def print_deploy_log():
+    path = "/shared/tinybird-deploy.log"
+    try:
+        with open(path) as fh:
+            lines = fh.read().splitlines()
+    except FileNotFoundError:
+        log("tb-deploy-log: not found yet")
+        return
+    log(f"tb-deploy-log: ===== {len(lines)} lines from {path} =====")
+    for line in lines[-200:]:
+        log("tb-deploy-log|", line)
+    log("tb-deploy-log: ===== end =====")
+
 import urllib.parse  # noqa: E402
 log("starting self-host local scheduler", f"libsql={LIBSQL_URL}", f"checker_base={checker_base_url()}", f"interval={INTERVAL_SECONDS}s")
+try:
+    print_deploy_log()
+except Exception as exc:  # noqa: BLE001
+    log("tb-deploy-log failed:", exc)
 try:
     tinybird_diagnostics()
 except Exception as exc:  # noqa: BLE001
@@ -262,4 +279,8 @@ while True:
         tinybird_diagnostics()
     except Exception as exc:  # noqa: BLE001
         log("tb-diag failed:", exc)
+    try:
+        print_deploy_log()
+    except Exception as exc:  # noqa: BLE001
+        log("tb-deploy-log failed:", exc)
     time.sleep(INTERVAL_SECONDS)
