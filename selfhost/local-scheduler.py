@@ -11,6 +11,8 @@ CHECKER_BASE_URL = os.environ.get("CHECKER_BASE_URL")
 CHECKER_URL = os.environ.get("CHECKER_URL", "http://checker:8080/checker/http?data=true")
 CRON_SECRET = os.environ.get("CRON_SECRET", "")
 INTERVAL_SECONDS = int(os.environ.get("INTERVAL_SECONDS", "60"))
+TINYBIRD_URL = os.environ.get("TINYBIRD_URL", "").rstrip("/")
+TB_TOKEN = os.environ.get("TB_TOKEN", "")
 
 PERIOD_SECONDS = {
     "30s": 30,
@@ -167,7 +169,49 @@ def run_monitor(monitor, now_ms):
         raise RuntimeError(f"unsupported monitor job_type {job_type!r}")
     post_json(checker_url(job_type), payload, {"Authorization": f"Basic {CRON_SECRET}"}, timeout=60)
 
+def tb_sql(sql):
+    if not TINYBIRD_URL:
+        return None
+    url = f"{TINYBIRD_URL}/v0/sql?q=" + urllib.parse.quote(sql + " FORMAT JSON")
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {TB_TOKEN}"})
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        return json.loads(resp.read())
+
+def tb_count(table):
+    try:
+        r = tb_sql(f"SELECT count() AS n FROM {table}")
+        return r["data"][0]["n"]
+    except Exception as exc:  # noqa: BLE001
+        return f"ERR:{exc}"
+
+def tinybird_diagnostics():
+    if not TINYBIRD_URL:
+        log("tb-diag: TINYBIRD_URL not set, skipping")
+        return
+    for t in ("ping_response__v8", "tcp_response__v0", "dns_response__v0",
+              "mv__http_status_45d__v1", "mv__tcp_status_45d__v1", "mv__dns_status_45d__v0"):
+        log("tb-diag count", t, "=", tb_count(t))
+    try:
+        ds = tb_sql("SELECT name FROM tinybird.datasources_ops_log LIMIT 0")  # noqa: F841
+    except Exception:
+        pass
+    try:
+        r = tb_sql("SELECT monitorId, requestStatus, cronTimestamp FROM tcp_response__v0 ORDER BY timestamp DESC LIMIT 3")
+        log("tb-diag tcp sample:", json.dumps(r.get("data", [])) if r else None)
+    except Exception as exc:  # noqa: BLE001
+        log("tb-diag tcp sample ERR:", exc)
+    try:
+        r = tb_sql("SELECT monitorId, requestStatus, cronTimestamp FROM dns_response__v0 ORDER BY timestamp DESC LIMIT 3")
+        log("tb-diag dns sample:", json.dumps(r.get("data", [])) if r else None)
+    except Exception as exc:  # noqa: BLE001
+        log("tb-diag dns sample ERR:", exc)
+
+import urllib.parse  # noqa: E402
 log("starting self-host local scheduler", f"libsql={LIBSQL_URL}", f"checker_base={checker_base_url()}", f"interval={INTERVAL_SECONDS}s")
+try:
+    tinybird_diagnostics()
+except Exception as exc:  # noqa: BLE001
+    log("tb-diag failed:", exc)
 while True:
     now_ms = int(time.time() * 1000)
     try:

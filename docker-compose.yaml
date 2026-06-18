@@ -353,6 +353,8 @@ services:
       - CHECKER_BASE_URL=http://checker:8080
       - CRON_SECRET=${SERVICE_PASSWORD_CRONSECRET}
       - INTERVAL_SECONDS=60
+      - TINYBIRD_URL=http://tinybird:7181
+      - TB_TOKEN=${SERVICE_PASSWORD_TINYBIRD}
     restart: unless-stopped
 
 
