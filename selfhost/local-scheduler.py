@@ -181,19 +181,6 @@ def tb_sql(sql):
         body = exc.read().decode(errors="replace")[:400]
         raise RuntimeError(f"HTTP {exc.code}: {body}") from None
 
-def tb_schema(name):
-    url = f"{TINYBIRD_URL}/v0/datasources/{name}"
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {TB_TOKEN}"})
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            d = json.loads(resp.read())
-        cols = [(c.get("name"), c.get("type")) for c in d.get("schema", {}).get("columns", [])]
-        return cols
-    except urllib.error.HTTPError as exc:
-        return f"ERR {exc.code}: {exc.read().decode(errors='replace')[:200]}"
-    except Exception as exc:  # noqa: BLE001
-        return f"ERR:{exc}"
-
 def tb_count(table):
     try:
         r = tb_sql(f"SELECT count() AS n FROM {table}")
@@ -202,41 +189,15 @@ def tb_count(table):
         return f"ERR:{exc}"
 
 def tinybird_diagnostics():
+    # One-time health snapshot logged at startup: row counts for the raw ingest
+    # datasources and the 45d status materialized views that feed the status-page
+    # uptime bars. Helpful when verifying the Tinybird provisioning is healthy.
     if not TINYBIRD_URL:
         log("tb-diag: TINYBIRD_URL not set, skipping")
         return
     for t in ("ping_response__v8", "tcp_response__v0", "dns_response__v0",
               "mv__http_status_45d__v1", "mv__tcp_status_45d__v1", "mv__dns_status_45d__v0"):
         log("tb-diag count", t, "=", tb_count(t))
-    for tbl in ("tcp_response__v0", "ping_response__v8"):
-        try:
-            r = tb_sql(f"SELECT monitorId, count() AS n FROM {tbl} GROUP BY monitorId ORDER BY monitorId")
-            log(f"tb-diag {tbl} per-monitor:", json.dumps(r.get("data", [])) if r else None)
-        except Exception as exc:  # noqa: BLE001
-            log(f"tb-diag {tbl} per-monitor ERR:", exc)
-    try:
-        r = tb_sql("SELECT monitorId, requestStatus, cronTimestamp FROM tcp_response__v0 ORDER BY timestamp DESC LIMIT 3")
-        log("tb-diag tcp sample:", json.dumps(r.get("data", [])) if r else None)
-    except Exception as exc:  # noqa: BLE001
-        log("tb-diag tcp sample ERR:", exc)
-    try:
-        r = tb_sql("SELECT monitorId, requestStatus, cronTimestamp FROM dns_response__v0 ORDER BY cronTimestamp DESC LIMIT 3")
-        log("tb-diag dns sample:", json.dumps(r.get("data", [])) if r else None)
-    except Exception as exc:  # noqa: BLE001
-        log("tb-diag dns sample ERR:", exc)
-    try:
-        r = tb_sql(
-            "SELECT timestamp, event_type, datasource_name, pipe_name, error "
-            "FROM tinybird.datasources_ops_log "
-            "WHERE result = 'error' ORDER BY timestamp DESC LIMIT 12"
-        )
-        rows = r.get("data", []) if r else []
-        if not rows:
-            log("tb-diag ops_log: no errors")
-        for row in rows:
-            log("tb-diag ops_log ERR:", json.dumps(row))
-    except Exception as exc:  # noqa: BLE001
-        log("tb-diag ops_log query ERR:", exc)
 
 def print_deploy_log():
     path = "/shared/tinybird-deploy.log"
@@ -246,10 +207,10 @@ def print_deploy_log():
     except FileNotFoundError:
         log("tb-deploy-log: not found yet")
         return
-    log(f"tb-deploy-log: ===== {len(lines)} lines from {path} =====")
-    for line in lines[-200:]:
+    tail = [ln for ln in lines if "SUMMARY" in ln or "failed:" in ln or "repair" in ln.lower() or "MISSING" in ln][-12:]
+    log(f"tb-deploy-log: {len(lines)} lines; summary tail:")
+    for line in tail:
         log("tb-deploy-log|", line)
-    log("tb-deploy-log: ===== end =====")
 
 import urllib.parse  # noqa: E402
 log("starting self-host local scheduler", f"libsql={LIBSQL_URL}", f"checker_base={checker_base_url()}", f"interval={INTERVAL_SECONDS}s")
@@ -279,8 +240,4 @@ while True:
         log(f"tick complete ok={ok} failed={failed}")
     except Exception as exc:
         log("scheduler tick failed:", repr(exc))
-    try:
-        tinybird_diagnostics()
-    except Exception as exc:  # noqa: BLE001
-        log("tb-diag failed:", exc)
     time.sleep(INTERVAL_SECONDS)
