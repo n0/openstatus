@@ -201,10 +201,23 @@ def tinybird_diagnostics():
     except Exception as exc:  # noqa: BLE001
         log("tb-diag tcp sample ERR:", exc)
     try:
-        r = tb_sql("SELECT monitorId, requestStatus, cronTimestamp FROM dns_response__v0 ORDER BY timestamp DESC LIMIT 3")
+        r = tb_sql("SELECT monitorId, requestStatus, cronTimestamp FROM dns_response__v0 ORDER BY cronTimestamp DESC LIMIT 3")
         log("tb-diag dns sample:", json.dumps(r.get("data", [])) if r else None)
     except Exception as exc:  # noqa: BLE001
         log("tb-diag dns sample ERR:", exc)
+    try:
+        r = tb_sql(
+            "SELECT timestamp, event_type, datasource_name, pipe_name, error "
+            "FROM tinybird.datasources_ops_log "
+            "WHERE result = 'error' ORDER BY timestamp DESC LIMIT 12"
+        )
+        rows = r.get("data", []) if r else []
+        if not rows:
+            log("tb-diag ops_log: no errors")
+        for row in rows:
+            log("tb-diag ops_log ERR:", json.dumps(row))
+    except Exception as exc:  # noqa: BLE001
+        log("tb-diag ops_log query ERR:", exc)
 
 import urllib.parse  # noqa: E402
 log("starting self-host local scheduler", f"libsql={LIBSQL_URL}", f"checker_base={checker_base_url()}", f"interval={INTERVAL_SECONDS}s")
@@ -230,4 +243,8 @@ while True:
         log(f"tick complete ok={ok} failed={failed}")
     except Exception as exc:
         log("scheduler tick failed:", repr(exc))
+    try:
+        tinybird_diagnostics()
+    except Exception as exc:  # noqa: BLE001
+        log("tb-diag failed:", exc)
     time.sleep(INTERVAL_SECONDS)

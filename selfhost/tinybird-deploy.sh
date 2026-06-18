@@ -66,6 +66,24 @@ for f in pipes/*.pipe; do push "$f"; done
 log "=== pushing endpoints ==="
 for f in endpoints/*.pipe; do push "$f"; done
 
+# Force-(re)materialize the status aggregate pipes and backfill from existing raw
+# rows. A plain push only attaches the materialized view to NEW inserts; --populate
+# backfills the rows that were ingested before the view existed, and re-running it
+# repairs any aggregate whose initial materialization did not attach.
+log "=== (re)materializing + populating status aggregates ==="
+for f in \
+  pipes/aggregate__http_status_45d__v1.pipe \
+  pipes/aggregate__tcp_status_45d__v1.pipe \
+  pipes/aggregate__dns_status_45d__v1.pipe ; do
+  [ -f "$f" ] || { log "skip (missing) $f"; continue; }
+  if tb push "$f" --force --populate --wait >"/tmp/pop.out" 2>&1; then
+    log "POPULATED $f"
+  else
+    log "POPULATE-FAIL $f"
+    sed 's/^/[tinybird-deploy]      | /' /tmp/pop.out | tail -n 12
+  fi
+done
+
 log "================ SUMMARY ================"
 log "pushed OK: $OK   failed: $FAIL"
 [ -n "$FAILED_FILES" ] && log "failed files:$FAILED_FILES"
