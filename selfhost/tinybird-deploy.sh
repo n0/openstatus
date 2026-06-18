@@ -43,27 +43,23 @@ run() {
   else
     log "=== repairing tcp_response__v0 (missing requestStatus) ==="
     log "  guard check said: $(tail -n 1 /tmp/chk.out)"
+    # Drop the tcp materialized-view pipes so they don't block the ALTER, then add
+    # the missing columns in place. `tb push --force` still prompts interactively for
+    # schema changes (ADD COLUMN ...), so feed the confirmation on stdin. The columns
+    # are nullable, so existing rows get NULL; the recreated matviews below only
+    # process NEW inserts, so the mv is not polluted by the old null-status rows.
     for f in pipes/*.pipe endpoints/*.pipe; do
       grep -q 'tcp_response__v0' "$f" 2>/dev/null || continue
       name=$(basename "$f" .pipe)
-      if tb pipe rm "$name" --yes >/tmp/rm.out 2>&1; then
-        log "  dropped pipe $name"
-      else
-        log "  pipe rm $name -> $(tail -n 1 /tmp/rm.out)"
-      fi
+      tb pipe rm "$name" --yes >/tmp/rm.out 2>&1 && log "  dropped pipe $name" || true
     done
-    if tb datasource rm tcp_response__v0 --yes >/tmp/dsrm.out 2>&1; then
-      log "  dropped datasource tcp_response__v0"
+    if printf 'y\ny\n' | tb push datasources/tcp_response__v0.datasource --force >/tmp/repair.out 2>&1; then
+      log "  altered tcp_response__v0 (added requestStatus/id)"
     else
-      log "  datasource rm tcp_response__v0 FAILED: $(tail -n 3 /tmp/dsrm.out)"
+      log "  alter tcp_response__v0 result:"
+      sed 's/^/      | /' /tmp/repair.out | tail -n 14
     fi
-    if tb push datasources/tcp_response__v0.datasource --force >/tmp/repair.out 2>&1; then
-      log "  recreated tcp_response__v0 from datafile"
-    else
-      log "  recreate tcp_response__v0 FAILED:"
-      sed 's/^/      | /' /tmp/repair.out | tail -n 12
-    fi
-    log "  post-repair schema check: $(tb sql 'SELECT requestStatus FROM tcp_response__v0 LIMIT 0' >/tmp/chk2.out 2>&1 && echo OK || tail -n 1 /tmp/chk2.out)"
+    log "  post-repair schema check: $(tb sql 'SELECT requestStatus FROM tcp_response__v0 LIMIT 0' >/tmp/chk2.out 2>&1 && echo OK-has-requestStatus || tail -n 1 /tmp/chk2.out)"
   fi
 
   OK=0; FAIL=0; FAILED_FILES=""
@@ -83,16 +79,6 @@ run() {
   for f in pipes/*.pipe; do push "$f"; done
   log "=== pushing endpoints ==="
   for f in endpoints/*.pipe; do push "$f"; done
-
-  log "=== (re)materializing + populating status aggregates ==="
-  for f in pipes/aggregate__http_status_45d__v1.pipe pipes/aggregate__tcp_status_45d__v1.pipe pipes/aggregate__dns_status_45d__v1.pipe; do
-    [ -f "$f" ] || continue
-    if tb push "$f" --force --populate --wait >/tmp/pop.out 2>&1; then
-      log "POPULATED $f"
-    else
-      log "POPULATE-FAIL $f"; sed 's/^/      | /' /tmp/pop.out | tail -n 10
-    fi
-  done
 
   log "============ SUMMARY ============"
   log "pushed OK: $OK   failed: $FAIL"
