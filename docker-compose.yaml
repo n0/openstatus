@@ -263,6 +263,25 @@ services:
       start_period: 5s
     restart: unless-stopped
 
+  # One-shot provisioning: deploy the OpenStatus Tinybird data project (datasources,
+  # materialized views, endpoint pipes) into the otherwise-empty local Tinybird so the
+  # status-page uptime bars have endpoints to query and the checker's ingested events
+  # flow through the 45d materialized views. Purely additive; nothing depends on it.
+  tinybird-deploy:
+    image: tinybirdco/tinybird-cli-docker:latest
+    entrypoint: ["sh", "/deploy.sh"]
+    environment:
+      - TINYBIRD_URL=http://tinybird:7181
+      - TB_TOKEN=${SERVICE_PASSWORD_TINYBIRD}
+      - PROJECT_DIR=/project
+    volumes:
+      - ./packages/tinybird:/project
+      - ./selfhost/tinybird-deploy.sh:/deploy.sh:ro
+    depends_on:
+      tinybird:
+        condition: service_started
+    restart: "no"
+
   private-location:
     image: ghcr.io/openstatushq/openstatus-private-location:latest
     expose:
