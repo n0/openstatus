@@ -299,7 +299,7 @@ services:
       - TINYBIRD_TOKEN=${SERVICE_PASSWORD_TINYBIRD}
       - OPENSTATUS_WORKFLOWS_URL=http://workflows:3000
       - CLOUD_PROVIDER=self-host
-      - OPENSTATUS_REGION=REGION_FLY_AMS
+      - OPENSTATUS_REGION=ams
       - FLY_REGION=ams
       - REGION=ams
       - LOG_LEVEL=info

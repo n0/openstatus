@@ -283,15 +283,17 @@ func env(key, fallback string) string {
 
 func selfHostRegion() string {
 	if region := env("OPENSTATUS_REGION", ""); region != "" {
-		return region
+		return normalizeSelfHostRegion(region)
 	}
 
 	region := env("REGION", "")
 	if region == "" || region == "local" {
 		region = env("FLY_REGION", "ams")
 	}
-	if strings.HasPrefix(region, "REGION_") {
-		return region
-	}
-	return fmt.Sprintf("REGION_FLY_%s", strings.ToUpper(strings.ReplaceAll(region, "-", "_")))
+	return normalizeSelfHostRegion(region)
+}
+
+func normalizeSelfHostRegion(region string) string {
+	normalized := strings.ToLower(region)
+	return strings.TrimPrefix(normalized, "region_fly_")
 }
