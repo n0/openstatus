@@ -174,8 +174,25 @@ def tb_sql(sql):
         return None
     url = f"{TINYBIRD_URL}/v0/sql?q=" + urllib.parse.quote(sql + " FORMAT JSON")
     req = urllib.request.Request(url, headers={"Authorization": f"Bearer {TB_TOKEN}"})
-    with urllib.request.urlopen(req, timeout=15) as resp:
-        return json.loads(resp.read())
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode(errors="replace")[:400]
+        raise RuntimeError(f"HTTP {exc.code}: {body}") from None
+
+def tb_schema(name):
+    url = f"{TINYBIRD_URL}/v0/datasources/{name}"
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {TB_TOKEN}"})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            d = json.loads(resp.read())
+        cols = [(c.get("name"), c.get("type")) for c in d.get("schema", {}).get("columns", [])]
+        return cols
+    except urllib.error.HTTPError as exc:
+        return f"ERR {exc.code}: {exc.read().decode(errors='replace')[:200]}"
+    except Exception as exc:  # noqa: BLE001
+        return f"ERR:{exc}"
 
 def tb_count(table):
     try:
@@ -191,10 +208,8 @@ def tinybird_diagnostics():
     for t in ("ping_response__v8", "tcp_response__v0", "dns_response__v0",
               "mv__http_status_45d__v1", "mv__tcp_status_45d__v1", "mv__dns_status_45d__v0"):
         log("tb-diag count", t, "=", tb_count(t))
-    try:
-        ds = tb_sql("SELECT name FROM tinybird.datasources_ops_log LIMIT 0")  # noqa: F841
-    except Exception:
-        pass
+    log("tb-diag tcp_response__v0 schema:", tb_schema("tcp_response__v0"))
+    log("tb-diag mv__tcp_status_45d__v1 schema:", tb_schema("mv__tcp_status_45d__v1"))
     try:
         r = tb_sql("SELECT monitorId, requestStatus, cronTimestamp FROM tcp_response__v0 ORDER BY timestamp DESC LIMIT 3")
         log("tb-diag tcp sample:", json.dumps(r.get("data", [])) if r else None)
