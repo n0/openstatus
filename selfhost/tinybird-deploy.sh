@@ -56,6 +56,38 @@ push() {
   fi
 }
 
+# 1b. Repair: the checker auto-creates tcp_response__v0 from its first event, and
+# because requestStatus is sent with `omitempty` it can be inferred WITHOUT the
+# requestStatus column. That makes every tcp aggregate (which references
+# requestStatus) fail to materialize, leaving the tcp status MV empty. A plain
+# `tb push --force` can't add the column while dependent matviews exist, so we tear
+# the tcp chain down and let the push below recreate it from the datafile with the
+# correct schema. (Old rows lack requestStatus and would mis-render, so dropping
+# them is intentional; the bars rebuild from new checks.) HTTP/DNS are healthy and
+# left untouched.
+repair_tcp() {
+  if ! tb sql "SELECT requestStatus FROM tcp_response__v0 LIMIT 0" >/dev/null 2>&1; then
+    log "=== repairing tcp_response__v0 (missing requestStatus column) ==="
+    for f in pipes/*.pipe; do
+      grep -q 'tcp_response__v0' "$f" 2>/dev/null || continue
+      name=$(basename "$f" .pipe)
+      tb pipe rm "$name" --yes >/dev/null 2>&1 && log "  dropped matview pipe $name" || true
+    done
+    tb datasource rm tcp_response__v0 --yes >/dev/null 2>&1 && log "  dropped tcp_response__v0" || log "  could not drop tcp_response__v0"
+    # Recreate immediately to minimise the window where a checker event could
+    # re-auto-create it with the bad inferred schema.
+    if tb push datasources/tcp_response__v0.datasource --force >/tmp/repair.out 2>&1; then
+      log "  recreated tcp_response__v0 from datafile"
+    else
+      log "  FAILED to recreate tcp_response__v0"
+      sed 's/^/[tinybird-deploy]      | /' /tmp/repair.out | tail -n 10
+    fi
+  else
+    log "tcp_response__v0 already has requestStatus; no repair needed"
+  fi
+}
+repair_tcp
+
 # 2. Push in dependency order: datasources, then materialized pipes, then endpoints.
 log "=== pushing datasources ==="
 for f in datasources/*.datasource; do push "$f"; done
