@@ -5,12 +5,15 @@ import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 LIBSQL_URL = os.environ.get("LIBSQL_URL", "http://libsql:8080").rstrip("/")
 CHECKER_BASE_URL = os.environ.get("CHECKER_BASE_URL")
 CHECKER_URL = os.environ.get("CHECKER_URL", "http://checker:8080/checker/http?data=true")
 CRON_SECRET = os.environ.get("CRON_SECRET", "")
 INTERVAL_SECONDS = int(os.environ.get("INTERVAL_SECONDS", "60"))
+MAX_WORKERS = 4
+CHECKER_REGION = os.environ.get("CHECKER_REGION", "ams")
 TINYBIRD_URL = os.environ.get("TINYBIRD_URL", "").rstrip("/")
 TB_TOKEN = os.environ.get("TB_TOKEN", "")
 
@@ -117,6 +120,10 @@ def parse_bool(value, default=False):
         return value != 0
     return str(value).lower() in {"1", "true", "yes", "on"}
 
+def regional_statuses():
+    rows = extract_result(libsql("SELECT monitor_id, region, status FROM monitor_status"))
+    return {str(r["monitor_id"]): r["status"] for r in rows if r["region"] == CHECKER_REGION}
+
 def active_monitors():
     sql = """
     SELECT id, workspace_id, job_type, url, method, status, body, headers, assertions,
@@ -145,7 +152,7 @@ def run_monitor(monitor, now_ms):
         "monitorId": str(monitor.get("id")),
         "url": monitor.get("url"),
         "method": monitor.get("method") or "GET",
-        "status": monitor.get("status") or "active",
+        "status": monitor.get("checker_status", monitor.get("status") or "active"),
         "body": monitor.get("body") or "",
         "headers": headers or [],
         "assertions": assertions or [],
@@ -222,22 +229,50 @@ try:
     tinybird_diagnostics()
 except Exception as exc:  # noqa: BLE001
     log("tb-diag failed:", exc)
-while True:
-    now_ms = int(time.time() * 1000)
-    try:
-        monitors = active_monitors()
-        due = [m for m in monitors if should_run(m.get("periodicity") or "1m", now_ms)]
-        log(f"loaded={len(monitors)} due={len(due)}")
-        ok = 0
-        failed = 0
-        for monitor in due:
-            try:
-                run_monitor(monitor, now_ms)
-                ok += 1
-            except Exception as exc:
-                failed += 1
-                log(f"monitor {monitor.get('id')} failed: {exc}")
-        log(f"tick complete ok={ok} failed={failed}")
-    except Exception as exc:
-        log("scheduler tick failed:", repr(exc))
-    time.sleep(INTERVAL_SECONDS)
+# Per-monitor monotonic deadlines avoid modulo windows that can miss a 5m job.
+# A monitor cannot overlap itself; each completed batch advances from its prior
+# deadline, skipping missed periods without catch-up bursts. Four workers bound
+# outbound load. Ordinary one-minute jobs no longer sleep an extra minute after
+# a serial batch. No provider, URL, assertion or retry policy is changed.
+next_due = {}
+with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+    while True:
+        try:
+            monitors = active_monitors()
+            regional = regional_statuses()
+            now = time.monotonic()
+            live_ids = {str(m["id"]) for m in monitors}
+            next_due = {key: value for key, value in next_due.items() if key in live_ids}
+            due = [m for m in monitors if now >= next_due.get(str(m["id"]), 0)]
+            if due:
+                started = time.monotonic()
+                log(f"loaded={len(monitors)} due={len(due)} workers={MAX_WORKERS}")
+                jobs = {}
+                for monitor in due:
+                    key = str(monitor["id"])
+                    observed = regional.get(key)
+                    # Empty prior status asks the checker for a factual state
+                    # update whenever aggregate/regional state has drifted.
+                    # The checker accepts a string; empty is not a stored status.
+                    monitor["checker_status"] = (observed if observed == monitor.get("status") else "")
+                    deadline = next_due.get(key, now)
+                    jobs[executor.submit(run_monitor, monitor, int(time.time() * 1000))] = (monitor, deadline)
+                ok = failed = 0
+                for future in as_completed(jobs):
+                    monitor, deadline = jobs[future]
+                    try:
+                        future.result()
+                        ok += 1
+                    except Exception as exc:
+                        failed += 1
+                        log(f"monitor {monitor.get('id')} failed: {exc}")
+                    period = PERIOD_SECONDS.get(monitor.get("periodicity") or "1m", 60)
+                    finished = time.monotonic()
+                    next_due[str(monitor["id"])] = deadline + (max(0, int((finished - deadline) // period)) + 1) * period
+                log(f"tick complete ok={ok} failed={failed} elapsed={time.monotonic()-started:.2f}s")
+            now = time.monotonic()
+            nearest = min(next_due.values(), default=now+10)
+            time.sleep(max(0.25, min(10, nearest-now)))
+        except Exception as exc:
+            log("scheduler tick failed:", repr(exc))
+            time.sleep(10)
