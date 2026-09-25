@@ -153,12 +153,12 @@ effective: |
       - bun build --compile --target bun  --sourcemap src/index.ts --outfile=app
   fromImage:
     path: debian
-    digest: sha256:cd1bc32f233a49f1b82149c9edb8ef34fb1e6c45f37211445c51a97603468604
+    digest: sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
   label:
     org.opencontainers.image.source: https://github.com/openstatusHQ/openstatus
     io.dofigen.version: 2.7.0
-    org.opencontainers.image.base.digest: sha256:cd1bc32f233a49f1b82149c9edb8ef34fb1e6c45f37211445c51a97603468604
-    org.opencontainers.image.base.name: docker.io/debian:bullseye-slim
+    org.opencontainers.image.base.digest: sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
+    org.opencontainers.image.base.name: docker.io/debian:bookworm-slim
     org.opencontainers.image.authors: OpenStatus Team
     org.opencontainers.image.vendor: OpenStatus
     org.opencontainers.image.title: OpenStatus Workflows
@@ -192,15 +192,15 @@ images:
         24-slim:
           digest: sha256:242549cd46785b480c832479a730f4f2a20865d61ea2e404fdb2a5c3d3b73ecf
       debian:
-        bullseye-slim:
-          digest: sha256:cd1bc32f233a49f1b82149c9edb8ef34fb1e6c45f37211445c51a97603468604
+        bookworm-slim:
+          digest: sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
     oven:
       bun:
         1.3.11:
           digest: sha256:0733e50325078969732ebe3b15ce4c4be5082f18c4ac1a0f0ca4839c2e4e42a7
 resources:
   dofigen.yml:
-    hash: 84357196743d6620d9e8adb7b2a0a599060e730c7f5a4f55f29e9306c023528a
+    hash: 463d7f299a73863fa6b0508c790c7a55af41197b7e8aa0bcb792795ceedec4f1
     content: |
       ignore:
         - node_modules
@@ -305,7 +305,7 @@ resources:
             # binary can resolve the libsql native addon (@libsql/<platform>) from disk at runtime.
             - pnpm install --prod --frozen-lockfile --config.node-linker=hoisted
 
-      fromImage: debian:bullseye-slim
+      fromImage: debian:bookworm-slim
       workdir: /app/
       root:
         run: apt-get update -q && apt-get install -y -q --no-install-recommends ca-certificates curl && update-ca-certificates && rm -rf /var/lib/apt/lists/* && mkdir -p /app/data && chown -R 1000:1000 /app/data

@@ -101,12 +101,12 @@ pnpm install --prod --frozen-lockfile --config.node-linker=hoisted
 EOF
 
 # runtime
-FROM debian@sha256:cd1bc32f233a49f1b82149c9edb8ef34fb1e6c45f37211445c51a97603468604 AS runtime
+FROM debian@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251 AS runtime
 LABEL \
     io.dofigen.version="2.7.0" \
     org.opencontainers.image.authors="OpenStatus Team" \
-    org.opencontainers.image.base.digest="sha256:cd1bc32f233a49f1b82149c9edb8ef34fb1e6c45f37211445c51a97603468604" \
-    org.opencontainers.image.base.name="docker.io/debian:bullseye-slim" \
+    org.opencontainers.image.base.digest="sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251" \
+    org.opencontainers.image.base.name="docker.io/debian:bookworm-slim" \
     org.opencontainers.image.description="Background job processing and probe scheduling for OpenStatus" \
     org.opencontainers.image.source="https://github.com/openstatusHQ/openstatus" \
     org.opencontainers.image.title="OpenStatus Workflows" \

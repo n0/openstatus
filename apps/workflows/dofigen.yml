@@ -101,7 +101,7 @@ builders:
       # binary can resolve the libsql native addon (@libsql/<platform>) from disk at runtime.
       - pnpm install --prod --frozen-lockfile --config.node-linker=hoisted
 
-fromImage: debian:bullseye-slim
+fromImage: debian:bookworm-slim
 workdir: /app/
 root:
   run: apt-get update -q && apt-get install -y -q --no-install-recommends ca-certificates curl && update-ca-certificates && rm -rf /var/lib/apt/lists/* && mkdir -p /app/data && chown -R 1000:1000 /app/data
